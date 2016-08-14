@@ -1,0 +1,73 @@
+<dom-module id="va-auth">
+  
+  <template>
+    
+    <firebase-auth id="auth"></firebase-auth>
+    
+    <va-auth-dialog id="dialog"></va-auth-dialog>
+    
+  </template>
+  
+  <script>
+    Polymer({
+        
+      is: 'va-auth',
+      
+      listeners: {
+        'dialog.auth': '_auth',
+        'dialog.signInWithEmail': '_signInWithEmail',
+        'dialog.signUpWithEmail': '_signUpWithEmail'
+      },
+      
+      link: function (provider) {
+      },
+      
+      signUp: function () {
+        this.$.dialog.openSignUp();
+      },
+      
+      signIn: function (provider, credential) {
+        this.$.dialog.openSignIn();
+      },
+      
+      signOut: function () {
+        this.$.auth.auth.signOut();
+      },
+      
+      _signInWithEmail: function (e) {
+        var promise = this.$.auth.signInWithEmailAndPassword(e.detail.email, e.detail.password);
+        
+        promise.then(function () {
+          this.$.dialog.close();
+          this.fire('done');
+        }.bind(this), function () {
+          this.$.dialog.failSignIn();
+          this.fire('error');
+        }.bind(this));
+      },
+      
+      _signUpWithEmail: function (e) {
+        var promise = this.$.auth.createUserWithEmailAndPassword(e.detail.email, e.detail.password);
+        
+        promise.then(function () {
+          this.$.dialog.close();
+          this.fire('done');
+        }.bind(this), function () {
+          this.$.dialog.failSignUp();
+          this.fire('error');
+        }.bind(this));
+      },
+      
+      _auth: function (e) {
+        var promise = this.$.auth.signInWithPopup(e.detail.provider);
+        
+        promise.then(function () {
+          this.$.dialog.close();
+          this.fire('done');
+        }.bind(this));
+      }
+      
+    });
+  </script>
+  
+</dom-module>
