@@ -49,7 +49,7 @@
       _auth: function (e) {
         var provider = e.detail.provider;
 
-        if (cordova) {
+        if (window.cordova) {
           var url = this.resolveUrl('../va-cordova-oauth/va-cordova-oauth.html', null, null, true);
 
           this.importHref(url, function () {
