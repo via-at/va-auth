@@ -1,0 +1,14 @@
+{
+  "name": "va-cordova-oauth",
+  "version": "0.0.1",
+  "description": "Useful web component for user authentication with Firebase.",
+  "license": "MIT",
+  "dependencies": {
+    "promise-polyfill": "polymerlabs/promise-polyfill#^1.0.0",
+    "polymer": "polymer/polymer#^1.6.0",
+    "va-cordova-oauth": "via-at/va-cordova-oauth"
+  },
+  "devDependencies": {
+    "web-component-tester": "^4.0.0"
+  }
+}

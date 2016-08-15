@@ -5,6 +5,8 @@
     <firebase-auth id="auth"></firebase-auth>
     
     <va-auth-dialog id="dialog"></va-auth-dialog>
+
+    <va-cordova-oauth id="cordovaAuth"></va-cordova-oauth>
     
   </template>
   
@@ -36,35 +38,57 @@
       
       _signInWithEmail: function (e) {
         var promise = this.$.auth.signInWithEmailAndPassword(e.detail.email, e.detail.password);
-        
-        promise.then(function () {
-          this.$.dialog.close();
-          this.fire('done');
-        }.bind(this), function () {
-          this.$.dialog.failSignIn();
-          this.fire('error');
-        }.bind(this));
+        promise.then(this._done.bind(this), this._failSignIn.bind(this));
       },
       
       _signUpWithEmail: function (e) {
         var promise = this.$.auth.createUserWithEmailAndPassword(e.detail.email, e.detail.password);
-        
-        promise.then(function () {
-          this.$.dialog.close();
-          this.fire('done');
-        }.bind(this), function () {
-          this.$.dialog.failSignUp();
-          this.fire('error');
-        }.bind(this));
+        promise.then(this._done.bind(this), this._failSignUp.bind(this));
       },
       
       _auth: function (e) {
-        var promise = this.$.auth.signInWithPopup(e.detail.provider);
-        
-        promise.then(function () {
-          this.$.dialog.close();
-          this.fire('done');
-        }.bind(this));
+        var provider = e.detail.provider;
+
+        if (cordova) {
+          var url = this.resolveUrl('../va-cordova-oauth/va-cordova-oauth.html', null, null, true);
+
+          this.importHref(url, function () {
+            this.$.cordovaAuth.signIn(provider).then(function () {
+              var credential;
+
+              switch (provider) {
+                case 'google':
+                  credential = firebase.auth.GoogleAuthProvider.credential(arguments[0], null);
+                  break;
+                case 'facebook':
+                  credential = firebase.auth.FacebookAuthProvider.credential(arguments[0]);
+                  break;
+                case 'twitter':
+                  credential = firebase.auth.TwitterAuthProvider.credential(arguments[0], arguments[1]);
+                  break;
+              }
+
+              this.$.auth.signInWithCredential(credential).then(this._done.bind(this));
+            }.bind(this));
+          }.bind(this));
+        } else {
+          this.$.auth.signInWithPopup(provider).then(this._done.bind(this));
+        }
+      },
+
+      _done: function () {
+        this.$.dialog.close();
+        this.fire('done');
+      },
+
+      _failSignIn: function () {
+        this.$.dialog.failSignIn();
+        this.fire('error');
+      },
+
+      _failSignUp: function () {
+        this.$.dialog.failSignUp();
+        this.fire('error');
       }
       
     });
