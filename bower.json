@@ -1,5 +1,5 @@
 {
-  "name": "va-cordova-oauth",
+  "name": "va-oauth",
   "version": "0.0.1",
   "description": "Useful web component for user authentication with Firebase.",
   "license": "MIT",
