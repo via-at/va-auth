@@ -4,8 +4,6 @@
     
     <firebase-auth id="auth"></firebase-auth>
     
-    <va-auth-dialog id="dialog"></va-auth-dialog>
-
     <va-cordova-oauth id="cordovaAuth"></va-cordova-oauth>
     
   </template>
@@ -15,42 +13,35 @@
         
       is: 'va-auth',
       
-      listeners: {
-        'dialog.auth': '_auth',
-        'dialog.signInWithEmail': '_signInWithEmail',
-        'dialog.signUpWithEmail': '_signUpWithEmail'
+      properties: {
+        account: {
+        notify: true
+        }
       },
       
-      link: function (provider) {
-      },
-      
-      signUp: function () {
-        this.$.dialog.openSignUp();
-      },
-      
-      signIn: function (provider, credential) {
-        this.$.dialog.openSignIn();
+      attached: function () {
+        this.$.auth.auth.onAuthStateChanged(this._onAuthStateChanged.bind(this));
       },
       
       signOut: function () {
         this.$.auth.auth.signOut();
       },
       
-      _signInWithEmail: function (e) {
-        var promise = this.$.auth.signInWithEmailAndPassword(e.detail.email, e.detail.password);
-        promise.then(this._done.bind(this), this._failSignIn.bind(this));
+      signIn: function (email, password) {
+        return this.$.auth.signInWithEmailAndPassword(email, password);
       },
       
-      _signUpWithEmail: function (e) {
-        var promise = this.$.auth.createUserWithEmailAndPassword(e.detail.email, e.detail.password);
-        promise.then(this._done.bind(this), this._failSignUp.bind(this));
+      signUp: function (email, password) {
+        return this.$.auth.createUserWithEmailAndPassword(email, password);
       },
       
-      _auth: function (e) {
+      link: function (e) {
+        var promise;
         var provider = e.detail.provider;
 
         if (window.cordova) {
           var url = this.resolveUrl('../va-cordova-oauth/va-cordova-oauth.html', null, null, true);
+          promise = Promise.resolve();
 
           this.importHref(url, function () {
             this.$.cordovaAuth.signIn(provider).then(function () {
@@ -68,27 +59,66 @@
                   break;
               }
 
-              this.$.auth.signInWithCredential(credential).then(this._done.bind(this));
+              this.$.auth.signInWithCredential(credential).then(function () {
+                promise.resolve();
+              });
             }.bind(this));
           }.bind(this));
         } else {
-          this.$.auth.signInWithPopup(provider).then(this._done.bind(this));
+          promise = this.$.auth.signInWithPopup(provider);
         }
+        
+        return promise;
       },
-
-      _done: function () {
-        this.$.dialog.close();
-        this.fire('done');
+      
+      changeEmail: function (email) {
+        return this.$.auth.auth.currentUser.updateEmail(email);
       },
-
-      _failSignIn: function () {
-        this.$.dialog.failSignIn();
-        this.fire('error');
+      
+      changePassword: function (newPassword) {
+        return this.$.auth.auth.currentUser.updatePassword(newPassword);
       },
-
-      _failSignUp: function () {
-        this.$.dialog.failSignUp();
-        this.fire('error');
+      
+      reauthenticate: function () {
+        var promise = new Promise(function (resolve, reject) {
+        });
+        return promise;
+        return this.account.providerData[0].providerId === 'email';
+      },
+      
+      hasEmailAndPasswordAccount: function () {
+        return this._findAccountByProvider('email');
+      },
+      
+      hasGoogleAccount: function () {
+        return this._findAccountByProvider('google.com');
+      },
+      
+      hasFacebookAccount: function () {
+        return this._findAccountByProvider('facebook.com');
+      },
+      
+      hasTwitterAccount: function () {
+        return this._findAccountByProvider('twitter.com');
+      },
+      
+      _findAccountByProvider: function (provider) {
+        for (var i in this.account.providerData) {
+          if (this.account.providerData[i].providerId === provider) {
+            return true;
+          }
+        }
+        return false;
+      },
+      
+      _onAuthStateChanged: function (user) {
+        if (user) {
+          this.account = user;
+          this.fire('va-auth-signed-in', user);
+        } else {
+          this.account = null;
+          this.fire('va-auth-signed-out');
+        }
       }
       
     });
