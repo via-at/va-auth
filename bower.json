@@ -1,6 +1,6 @@
 {
   "name": "va-auth",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "description": "Useful web component for user authentication with Firebase.",
   "license": "MIT",
   "dependencies": {
