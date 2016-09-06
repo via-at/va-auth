@@ -4,8 +4,6 @@
     
     <firebase-auth id="auth"></firebase-auth>
     
-    <va-cordova-oauth id="cordovaAuth"></va-cordova-oauth>
-    
   </template>
   
   <script>
@@ -14,8 +12,10 @@
       is: 'va-auth',
       
       properties: {
+        
         account: {
-        notify: true
+          type: Object,
+          notify: true
         }
       },
       
@@ -24,7 +24,7 @@
       },
       
       signOut: function () {
-        this.$.auth.auth.signOut();
+        return this.$.auth.auth.signOut();
       },
       
       signIn: function (email, password) {
@@ -32,83 +32,48 @@
       },
       
       signUp: function (email, password) {
-        return this.$.auth.createUserWithEmailAndPassword(email, password);
+        var that = this;
+        
+        return this.$.auth.createUserWithEmailAndPassword(email, password)
+          .then(function () {
+            return that.account.sendEmailVerification();
+          });
       },
       
-      link: function (e) {
-        var promise;
-        var provider = e.detail.provider;
-
-        if (window.cordova) {
-          var url = this.resolveUrl('../va-cordova-oauth/va-cordova-oauth.html', null, null, true);
-          promise = Promise.resolve();
-
-          this.importHref(url, function () {
-            this.$.cordovaAuth.signIn(provider).then(function () {
-              var credential;
-
-              switch (provider) {
-                case 'google':
-                  credential = firebase.auth.GoogleAuthProvider.credential(arguments[0], null);
-                  break;
-                case 'facebook':
-                  credential = firebase.auth.FacebookAuthProvider.credential(arguments[0]);
-                  break;
-                case 'twitter':
-                  credential = firebase.auth.TwitterAuthProvider.credential(arguments[0], arguments[1]);
-                  break;
-              }
-
-              this.$.auth.signInWithCredential(credential).then(function () {
-                promise.resolve();
-              });
-            }.bind(this));
-          }.bind(this));
-        } else {
-          promise = this.$.auth.signInWithPopup(provider);
+      resetPassword: function (email) {
+        return this.$.auth.auth.sendPasswordResetEmail(email);
+      },
+      
+      changeEmail: function (email, password) {
+        var that = this;
+        
+        if (email !== this.account.email) {
+          return [
+            function () { return that.account.updateEmail(email); },
+            function () { return that.account.sendEmailVerification(); }
+          ].reduce(function (p, next) {
+            return p.then(next);
+          }, this.account.reauthenticate(this._emailCredential(password)));
         }
         
-        return promise;
+        return Promise.resolve();
       },
       
-      changeEmail: function (email) {
-        return this.$.auth.auth.currentUser.updateEmail(email);
-      },
-      
-      changePassword: function (newPassword) {
-        return this.$.auth.auth.currentUser.updatePassword(newPassword);
-      },
-      
-      reauthenticate: function () {
-        var promise = new Promise(function (resolve, reject) {
-        });
-        return promise;
-        return this.account.providerData[0].providerId === 'email';
-      },
-      
-      hasEmailAndPasswordAccount: function () {
-        return this._findAccountByProvider('email');
-      },
-      
-      hasGoogleAccount: function () {
-        return this._findAccountByProvider('google.com');
-      },
-      
-      hasFacebookAccount: function () {
-        return this._findAccountByProvider('facebook.com');
-      },
-      
-      hasTwitterAccount: function () {
-        return this._findAccountByProvider('twitter.com');
-      },
-      
-      _findAccountByProvider: function (provider) {
-        for (var i in this.account.providerData) {
-          if (this.account.providerData[i].providerId === provider) {
-            return true;
-          }
+      changePassword: function (newPassword, oldPassword) {
+        var that = this;
+        
+        if (newPassword !== oldPassword) {
+          return this.account.reauthenticate(this._emailCredential(oldPassword))
+            .then(function () {
+              return that.account.updatePassword(newPassword);
+            });
         }
-        return false;
+        
+        return Promise.resolve();
+      },
+      
+      _emailCredential: function (password) {
+        return firebase.auth.EmailAuthProvider.credential(this.account.email, password);
       },
       
       _onAuthStateChanged: function (user) {

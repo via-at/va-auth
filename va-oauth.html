@@ -1,0 +1,83 @@
+<dom-module id="va-oauth">
+  
+  <template>
+    
+    <va-cordova-oauth id="cordovaAuth"></va-cordova-oauth>
+    
+  </template>
+  
+  <script>
+    Polymer({
+      
+      is: 'va-oauth',
+      
+      properties: {
+        
+        account: {
+          type: Object
+        }
+      },
+      
+      link: function (provider) {
+        var that = this;
+        var promise;
+
+        if (window.cordova) {
+          var url = this.resolveUrl('../va-cordova-oauth/va-cordova-oauth.html', null, null, true);
+          promise = Promise.resolve();
+
+          this.importHref(url, function () {
+            that.$.cordovaAuth.signIn(provider).then(function () {
+              var credential;
+
+              switch (provider) {
+                case 'google':
+                  credential = firebase.auth.GoogleAuthProvider.credential(arguments[0], null);
+                  break;
+                case 'facebook':
+                  credential = firebase.auth.FacebookAuthProvider.credential(arguments[0]);
+                  break;
+                case 'twitter':
+                  credential = firebase.auth.TwitterAuthProvider.credential(arguments[0], arguments[1]);
+                  break;
+              }
+
+              that.account.link(credential).then(function () {
+                promise.resolve();
+              });
+            });
+          });
+        } else {
+          promise = this.$.auth.signInWithPopup(provider).then(function (result) {
+            that.account.link(result.credential);
+          });
+        }
+        
+        return promise;
+      },
+      
+      hasGoogleAccount: function () {
+        return this._findAccountByProvider('google.com');
+      },
+      
+      hasFacebookAccount: function () {
+        return this._findAccountByProvider('facebook.com');
+      },
+      
+      hasTwitterAccount: function () {
+        return this._findAccountByProvider('twitter.com');
+      },
+      
+      _findAccountByProvider: function (provider) {
+        for (var i in this.account.providerData) {
+          if (this.account.providerData[i].providerId === provider) {
+            return true;
+          }
+        }
+        return false;
+      }
+      
+    });
+  </script>
+  
+</dom-module>
